@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    border-color: #1e293b;
+  }
+  body {
+    background-color: #07090e;
+    color: #f8fafc;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* Custom Sleek Dark Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0c1017;
+}
+::-webkit-scrollbar-thumb {
+  background: #273549;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3b4e68;
+}
+
+/* Viral Ranking Typography Effects */
+.font-impact-title {
+  font-family: 'Impact', 'Montserrat', 'Arial Black', sans-serif;
+  letter-spacing: 0.04em;
+  line-height: 1.05;
+}
+
+/* Text Stroke & Shadows for Outlines */
+.title-stroke {
+  -webkit-text-stroke: 2.5px #000000;
+  text-shadow: 
+    -2px -2px 0 #000,  
+     2px -2px 0 #000,
+    -2px  2px 0 #000,
+     2px  2px 0 #000,
+     0px 4px 12px rgba(0, 0, 0, 0.85);
+}
+
+.num-stroke {
+  -webkit-text-stroke: 3px #000000;
+  text-shadow: 
+    -2px -2px 0 #000,  
+     2px -2px 0 #000,
+    -2px  2px 0 #000,
+     2px  2px 0 #000,
+     0px 3px 8px rgba(0, 0, 0, 0.9);
+}
+
+/* Timeline Custom Slider */
+input[type="range"] {
+  accent-color: #6366f1;
+}
+
+/* Glow effects */
+.glow-accent {
+  box-shadow: 0 0 25px rgba(99, 102, 241, 0.35);
+}
+.glow-gold {
+  box-shadow: 0 0 20px rgba(250, 204, 21, 0.4);
+}
