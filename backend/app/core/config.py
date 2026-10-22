@@ -10,13 +10,16 @@ class Settings(BaseSettings):
     
     # Base directories
     BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent.parent
-    MEDIA_DIR: Path = BASE_DIR / "media"
+    MEDIA_DIR: Path = Path("/tmp/media") if os.environ.get("VERCEL") else (BASE_DIR / "media")
     UPLOADS_DIR: Path = MEDIA_DIR / "uploads"
     THUMBNAILS_DIR: Path = MEDIA_DIR / "thumbnails"
     RENDERS_DIR: Path = MEDIA_DIR / "renders"
     TEMP_DIR: Path = MEDIA_DIR / "temp"
     
-    DATABASE_URL: str = f"sqlite:///{BASE_DIR}/rankstudio.db"
+    DATABASE_URL: str = os.environ.get(
+        "DATABASE_URL",
+        "sqlite:////tmp/rankstudio.db" if os.environ.get("VERCEL") else f"sqlite:///{BASE_DIR}/rankstudio.db"
+    )
     
     # Media constraints
     MAX_UPLOAD_SIZE_MB: int = 250
