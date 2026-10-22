@@ -9,6 +9,7 @@ class MediaAsset(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=True)
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     
     media_type = Column(String(20), nullable=False) # "video", "image", "audio"
     original_filename = Column(String(255), nullable=False)

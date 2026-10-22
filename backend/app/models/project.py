@@ -71,10 +71,12 @@ class Project(Base):
         "transition_sfx": "none"
     })
 
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
+    owner = relationship("User", back_populates="projects")
     media_assets = relationship("MediaAsset", back_populates="project", cascade="all, delete-orphan")
     ranking_entries = relationship("RankingEntry", back_populates="project", order_by="RankingEntry.position", cascade="all, delete-orphan")
     render_jobs = relationship("RenderJob", back_populates="project", cascade="all, delete-orphan")

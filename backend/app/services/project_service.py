@@ -8,8 +8,13 @@ from app.schemas.project import ProjectCreate, ProjectUpdate
 
 class ProjectService:
     @staticmethod
-    def get_all_projects(db: Session, skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
-        projects = db.query(Project).order_by(Project.updated_at.desc()).offset(skip).limit(limit).all()
+    def get_all_projects(db: Session, user_id: Optional[str] = None, skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
+        query = db.query(Project)
+        if user_id:
+            query = query.filter((Project.user_id == user_id) | (Project.user_id.is_(None)))
+        else:
+            query = query.filter(Project.user_id.is_(None))
+        projects = query.order_by(Project.updated_at.desc()).offset(skip).limit(limit).all()
         result = []
         for p in projects:
             entries_count = len(p.ranking_entries)
@@ -40,13 +45,14 @@ class ProjectService:
         return db.query(Project).filter(Project.id == project_id).first()
 
     @staticmethod
-    def create_project(db: Session, create_data: ProjectCreate) -> Project:
+    def create_project(db: Session, create_data: ProjectCreate, user_id: Optional[str] = None) -> Project:
         project = Project(
             name=create_data.name or "Top 5 Ultimate Ranking",
             aspect_ratio=create_data.aspect_ratio or "9:16",
             resolution_width=1080,
             resolution_height=1920,
-            fps=30
+            fps=30,
+            user_id=user_id
         )
 
         # Customization depending on template type

@@ -1,8 +1,10 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.api.deps import get_optional_user, get_current_user
+from app.models.user import User
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
 from app.schemas.media import MediaAssetResponse
 from app.services.project_service import ProjectService
@@ -12,40 +14,81 @@ from app.models.ranking import RankingEntry
 
 router = APIRouter()
 
-@router.get("", response_model=List[ProjectResponse])
-def get_projects(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return ProjectService.get_projects(db, skip=skip, limit=limit)
-
-@router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
-def create_project(project_in: ProjectCreate, db: Session = Depends(get_db)):
-    return ProjectService.create_project(db, project_in)
-
-@router.get("/{project_id}", response_model=ProjectResponse)
-def get_project(project_id: str, db: Session = Depends(get_db)):
-    project = ProjectService.get_project(db, project_id)
+def check_project_access(project: Project, user: Optional[User], require_owner: bool = False):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+    # If project belongs to a user:
+    if project.user_id:
+        if not user or user.id != project.user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to access this project"
+            )
+    elif require_owner and user is not None:
+        # Starter/sample project is read-only if someone tries to delete it
+        pass
+
+@router.get("", response_model=List[ProjectResponse])
+def get_projects(
+    skip: int = 0,
+    limit: int = 100,
+    user: Optional[User] = Depends(get_optional_user),
+    db: Session = Depends(get_db)
+):
+    user_id = user.id if user else None
+    return ProjectService.get_projects(db, user_id=user_id, skip=skip, limit=limit)
+
+@router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
+def create_project(
+    project_in: ProjectCreate,
+    user: Optional[User] = Depends(get_optional_user),
+    db: Session = Depends(get_db)
+):
+    user_id = user.id if user else None
+    return ProjectService.create_project(db, project_in, user_id=user_id)
+
+@router.get("/{project_id}", response_model=ProjectResponse)
+def get_project(
+    project_id: str,
+    user: Optional[User] = Depends(get_optional_user),
+    db: Session = Depends(get_db)
+):
+    project = ProjectService.get_project(db, project_id)
+    check_project_access(project, user, require_owner=False)
     return project
 
 @router.put("/{project_id}", response_model=ProjectResponse)
-def update_project(project_id: str, project_in: ProjectUpdate, db: Session = Depends(get_db)):
+def update_project(
+    project_id: str,
+    project_in: ProjectUpdate,
+    user: Optional[User] = Depends(get_optional_user),
+    db: Session = Depends(get_db)
+):
     project = ProjectService.get_project(db, project_id)
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+    check_project_access(project, user, require_owner=True)
     return ProjectService.update_project(db, project, project_in)
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_project(project_id: str, db: Session = Depends(get_db)):
+def delete_project(
+    project_id: str,
+    user: Optional[User] = Depends(get_optional_user),
+    db: Session = Depends(get_db)
+):
+    project = ProjectService.get_project(db, project_id)
+    check_project_access(project, user, require_owner=True)
     success = ProjectService.delete_project(db, project_id)
     if not success:
         raise HTTPException(status_code=404, detail="Project not found")
     return None
 
 @router.post("/{project_id}/duplicate", response_model=ProjectResponse)
-def duplicate_project(project_id: str, db: Session = Depends(get_db)):
+def duplicate_project(
+    project_id: str,
+    user: Optional[User] = Depends(get_optional_user),
+    db: Session = Depends(get_db)
+):
     original = ProjectService.get_project(db, project_id)
-    if not original:
-        raise HTTPException(status_code=404, detail="Original project not found")
+    check_project_access(original, user, require_owner=False)
 
     new_project = Project(
         name=f"{original.name} (Copy)",
@@ -56,7 +99,8 @@ def duplicate_project(project_id: str, db: Session = Depends(get_db)):
         title_config=original.title_config,
         ranking_config=original.ranking_config,
         footer_config=original.footer_config,
-        audio_config=original.audio_config
+        audio_config=original.audio_config,
+        user_id=user.id if user else None
     )
     db.add(new_project)
     db.commit()

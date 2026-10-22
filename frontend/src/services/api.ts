@@ -20,14 +20,32 @@ export function getMediaUrl(path: string | null | undefined): string {
   return path.startsWith('/') ? path : `/${path}`;
 }
 
+export function getAuthToken(): string | null {
+  return localStorage.getItem('rankstudio_token');
+}
+
+export function setAuthToken(token: string | null) {
+  if (token) {
+    localStorage.setItem('rankstudio_token', token);
+  } else {
+    localStorage.removeItem('rankstudio_token');
+  }
+}
+
 export async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  const token = getAuthToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string> || {}),
+  };
+  if (token && !headers['Authorization']) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const response = await fetch(url, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
   });
 
   if (!response.ok) {
@@ -127,8 +145,14 @@ export const api = {
     for (const file of files) {
       formData.append('files', file);
     }
+    const token = getAuthToken();
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
     const response = await fetch(`${BASE_URL}/projects/${projectId}/media`, {
       method: 'POST',
+      headers,
       body: formData,
     });
     if (!response.ok) {
@@ -149,6 +173,43 @@ export const api = {
     return apiRequest<void>(`/media/${assetId}`, {
       method: 'DELETE',
     });
+  },
+
+  // Auth
+  async register(email: string, password: string): Promise<{ access_token: string; user: { id: string; email: string } }> {
+    const res = await apiRequest<{ access_token: string; user: { id: string; email: string } }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    if (res.access_token) {
+      setAuthToken(res.access_token);
+    }
+    return res;
+  },
+
+  async login(email: string, password: string): Promise<{ access_token: string; user: { id: string; email: string } }> {
+    const res = await apiRequest<{ access_token: string; user: { id: string; email: string } }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    if (res.access_token) {
+      setAuthToken(res.access_token);
+    }
+    return res;
+  },
+
+  async getMe(): Promise<{ id: string; email: string; created_at: string } | null> {
+    try {
+      if (!getAuthToken()) return null;
+      return await apiRequest<{ id: string; email: string; created_at: string }>('/auth/me');
+    } catch {
+      setAuthToken(null);
+      return null;
+    }
+  },
+
+  logout(): void {
+    setAuthToken(null);
   },
 
   // Rendering
@@ -172,5 +233,7 @@ export const api = {
     return apiRequest('/health');
   },
 
-  getMediaUrl
+  getMediaUrl,
+  getAuthToken,
+  setAuthToken
 };

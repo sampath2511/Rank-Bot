@@ -3,28 +3,42 @@ from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, s
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.api.deps import get_optional_user
+from app.models.user import User
 from app.schemas.media import MediaAssetResponse, MediaUrlImportRequest
 from app.services.media_service import MediaService
 
 router = APIRouter()
 
 @router.get("", response_model=List[MediaAssetResponse])
-def get_assets(project_id: Optional[str] = None, db: Session = Depends(get_db)):
-    return MediaService.get_assets_by_project(db, project_id)
+def get_assets(
+    project_id: Optional[str] = None,
+    user: Optional[User] = Depends(get_optional_user),
+    db: Session = Depends(get_db)
+):
+    user_id = user.id if user else None
+    return MediaService.get_assets_by_project(db, project_id=project_id, user_id=user_id)
 
 @router.get("/projects/{project_id}/media", response_model=List[MediaAssetResponse])
-def get_project_media(project_id: str, db: Session = Depends(get_db)):
-    return MediaService.get_assets_by_project(db, project_id)
+def get_project_media(
+    project_id: str,
+    user: Optional[User] = Depends(get_optional_user),
+    db: Session = Depends(get_db)
+):
+    user_id = user.id if user else None
+    return MediaService.get_assets_by_project(db, project_id=project_id, user_id=user_id)
 
 @router.post("/projects/{project_id}/media", response_model=List[MediaAssetResponse], status_code=status.HTTP_201_CREATED)
 async def upload_project_media(
     project_id: str,
     files: List[UploadFile] = File(...),
+    user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
+    user_id = user.id if user else None
     results = []
     for f in files:
-        asset = await MediaService.save_uploaded_file(db, f, project_id)
+        asset = await MediaService.save_uploaded_file(db, f, project_id, user_id=user_id)
         results.append(asset)
     return results
 
@@ -32,9 +46,11 @@ async def upload_project_media(
 async def upload_asset(
     file: UploadFile = File(...),
     project_id: Optional[str] = Form(None),
+    user: Optional[User] = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
-    return await MediaService.save_uploaded_file(db, file, project_id)
+    user_id = user.id if user else None
+    return await MediaService.save_uploaded_file(db, file, project_id, user_id=user_id)
 
 
 from app.services.url_service import UrlImportService

@@ -12,12 +12,16 @@ import {
   FolderPlus,
   Loader2,
   AlertCircle,
-  RotateCcw
+  RotateCcw,
+  LogIn,
+  LogOut,
+  User as UserIcon
 } from 'lucide-react';
 import { Project } from '../types';
 import { api } from '../services/api';
 import { Modal } from '../components/Modal';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { AuthModal } from '../components/AuthModal';
 
 interface DashboardProps {
   onOpenProject: (projectId: string) => void;
@@ -28,6 +32,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenProject }) => {
   const [loading, setLoading] = useState(true);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
 
+  // Auth State
+  const [currentUser, setCurrentUser] = useState<{ id: string; email: string } | null>(null);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+
   // New Project Modal State
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('Top 5 Viral Ranking');
@@ -37,6 +45,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenProject }) => {
 
   // Delete Confirm State
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.getMe().then(user => {
+      if (user) setCurrentUser(user);
+    });
+  }, []);
 
   const loadProjects = async () => {
     try {
@@ -131,13 +145,43 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenProject }) => {
           </div>
         </div>
 
-        <button
-          onClick={() => setIsCreateOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-yellow-400 hover:bg-yellow-300 text-black font-extrabold text-xs rounded-xl shadow-lg shadow-yellow-500/20 transition-all active:scale-95"
-        >
-          <Plus size={16} />
-          Create New Project
-        </button>
+        <div className="flex items-center gap-3">
+          {currentUser ? (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-studio-800 border border-studio-700 rounded-xl text-xs text-slate-300">
+                <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                <span className="font-semibold text-white max-w-[140px] truncate">{currentUser.email}</span>
+              </div>
+              <button
+                onClick={() => {
+                  api.logout();
+                  setCurrentUser(null);
+                  loadProjects();
+                }}
+                title="Sign Out"
+                className="p-2 text-slate-400 hover:text-white hover:bg-studio-800 rounded-xl transition-colors"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsAuthOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-studio-800 hover:bg-studio-750 border border-studio-700 rounded-xl text-xs font-bold text-white transition-all"
+            >
+              <LogIn size={15} className="text-yellow-400" />
+              <span>Sign In / Register</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setIsCreateOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-yellow-400 hover:bg-yellow-300 text-black font-extrabold text-xs rounded-xl shadow-lg shadow-yellow-500/20 transition-all active:scale-95"
+          >
+            <Plus size={16} />
+            Create Project
+          </button>
+        </div>
       </header>
 
       {/* Main Content Area */}
@@ -399,6 +443,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenProject }) => {
         confirmLabel="Delete Project"
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteTargetId(null)}
+      />
+
+      {/* Authentication Modal */}
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        onSuccess={(user) => {
+          setCurrentUser(user);
+          loadProjects();
+        }}
       />
     </div>
   );

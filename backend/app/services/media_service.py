@@ -18,10 +18,12 @@ class MediaService:
         return db.query(MediaAsset).filter(MediaAsset.id == asset_id).first()
 
     @staticmethod
-    def get_assets_by_project(db: Session, project_id: Optional[str] = None):
+    def get_assets_by_project(db: Session, project_id: Optional[str] = None, user_id: Optional[str] = None):
         query = db.query(MediaAsset)
         if project_id:
             query = query.filter(MediaAsset.project_id == project_id)
+        if user_id:
+            query = query.filter((MediaAsset.user_id == user_id) | (MediaAsset.user_id.is_(None)))
         return query.order_by(MediaAsset.created_at.desc()).all()
 
     @staticmethod
@@ -115,7 +117,8 @@ class MediaService:
         cls,
         db: Session,
         upload_file: UploadFile,
-        project_id: Optional[str] = None
+        project_id: Optional[str] = None,
+        user_id: Optional[str] = None
     ) -> MediaAsset:
         ext = Path(upload_file.filename or "").suffix.lower()
         if not ext:
@@ -199,6 +202,7 @@ class MediaService:
         asset = MediaAsset(
             id=asset_id,
             project_id=project_id,
+            user_id=user_id,
             media_type=media_type,
             original_filename=upload_file.filename or unique_filename,
             storage_filename=unique_filename,
