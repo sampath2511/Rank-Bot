@@ -73,6 +73,53 @@ def create_ranking_entry(project_id: str, entry_in: RankingEntryCreate, db: Sess
     db.refresh(entry)
     return _enrich_entry(entry)
 
+@router.post("/projects/{project_id}/rankings/reorder", response_model=List[RankingEntryResponse])
+@router.put("/projects/{project_id}/rankings/reorder", response_model=List[RankingEntryResponse])
+def reorder_rankings(project_id: str, req: RankingReorderRequest, db: Session = Depends(get_db)):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    for item in req.order:
+        entry = db.query(RankingEntry).filter(
+            RankingEntry.id == item.id,
+            RankingEntry.project_id == project_id
+        ).first()
+        if entry:
+            entry.position = item.position
+            if item.display_number is not None:
+                entry.display_number = item.display_number
+
+    db.commit()
+
+    entries = db.query(RankingEntry)\
+        .filter(RankingEntry.project_id == project_id)\
+        .order_by(RankingEntry.position.asc())\
+        .all()
+    return [_enrich_entry(e) for e in entries]
+
+@router.post("/projects/{project_id}/rankings/renumber", response_model=List[RankingEntryResponse])
+def auto_renumber_rankings(project_id: str, mode: str = "asc", db: Session = Depends(get_db)):
+    """mode: 'asc' (1, 2, 3...) or 'countdown' (5, 4, 3, 2, 1)"""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    entries = db.query(RankingEntry)\
+        .filter(RankingEntry.project_id == project_id)\
+        .order_by(RankingEntry.position.asc())\
+        .all()
+
+    total = len(entries)
+    for idx, e in enumerate(entries):
+        if mode == "countdown":
+            e.display_number = str(total - idx)
+        else:
+            e.display_number = str(idx + 1)
+
+    db.commit()
+    return [_enrich_entry(e) for e in entries]
+
 @router.put("/projects/{project_id}/rankings/{entry_id}", response_model=RankingEntryResponse)
 def update_ranking_entry(
     project_id: str,
@@ -154,50 +201,3 @@ def delete_ranking_by_id(entry_id: str, db: Session = Depends(get_db)):
     db.commit()
     return None
 
-@router.post("/projects/{project_id}/rankings/reorder", response_model=List[RankingEntryResponse])
-@router.put("/projects/{project_id}/rankings/reorder", response_model=List[RankingEntryResponse])
-def reorder_rankings(project_id: str, req: RankingReorderRequest, db: Session = Depends(get_db)):
-    project = db.query(Project).filter(Project.id == project_id).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-
-    for item in req.order:
-        entry = db.query(RankingEntry).filter(
-            RankingEntry.id == item.id,
-            RankingEntry.project_id == project_id
-        ).first()
-        if entry:
-            entry.position = item.position
-            if item.display_number is not None:
-                entry.display_number = item.display_number
-
-    db.commit()
-
-    entries = db.query(RankingEntry)\
-        .filter(RankingEntry.project_id == project_id)\
-        .order_by(RankingEntry.position.asc())\
-        .all()
-    return [_enrich_entry(e) for e in entries]
-
-@router.post("/projects/{project_id}/rankings/renumber", response_model=List[RankingEntryResponse])
-def auto_renumber_rankings(project_id: str, mode: str = "asc", db: Session = Depends(get_db)):
-    """mode: 'asc' (1, 2, 3...) or 'countdown' (5, 4, 3, 2, 1)"""
-    project = db.query(Project).filter(Project.id == project_id).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    entries = db.query(RankingEntry)\
-        .filter(RankingEntry.project_id == project_id)\
-        .order_by(RankingEntry.position.asc())\
-        .all()
-
-    total = len(entries)
-    for idx, e in enumerate(entries):
-        if mode == "countdown":
-            e.display_number = str(total - idx)
-        else:
-            e.display_number = str(idx + 1)
-
-    db.commit()
-    return [_enrich_entry(e) for e in entries]

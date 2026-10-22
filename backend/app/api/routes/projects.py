@@ -1,10 +1,12 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
+from app.schemas.media import MediaAssetResponse
 from app.services.project_service import ProjectService
+from app.services.media_service import MediaService
 from app.models.project import Project
 from app.models.ranking import RankingEntry
 
@@ -79,5 +81,26 @@ def duplicate_project(project_id: str, db: Session = Depends(get_db)):
         db.add(new_entry)
     db.commit()
     db.refresh(new_project)
-    ProjectService._calculate_project_stats(new_project)
     return new_project
+
+@router.get("/{project_id}/media", response_model=List[MediaAssetResponse])
+def get_project_media(project_id: str, db: Session = Depends(get_db)):
+    project = ProjectService.get_project(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return MediaService.get_assets_by_project(db, project_id)
+
+@router.post("/{project_id}/media", response_model=List[MediaAssetResponse], status_code=status.HTTP_201_CREATED)
+async def upload_project_media(
+    project_id: str,
+    files: List[UploadFile] = File(...),
+    db: Session = Depends(get_db)
+):
+    project = ProjectService.get_project(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    results = []
+    for f in files:
+        asset = await MediaService.save_uploaded_file(db, f, project_id)
+        results.append(asset)
+    return results

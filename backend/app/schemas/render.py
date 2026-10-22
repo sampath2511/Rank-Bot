@@ -13,7 +13,7 @@ class RenderJobResponse(BaseModel):
     id: str
     project_id: str
     status: str # queued, preparing, rendering, mixing, validating, completed, failed
-    progress: int # 0 to 100
+    progress: float # 0.0 to 100.0
     current_step: str
     output_filename: Optional[str]
     output_path: Optional[str]
