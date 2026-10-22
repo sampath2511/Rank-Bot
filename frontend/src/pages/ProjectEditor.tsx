@@ -8,7 +8,9 @@ import {
   Layers, 
   Image as ImageIcon,
   Loader2,
-  Tv
+  Tv,
+  AlertCircle,
+  RotateCcw
 } from 'lucide-react';
 import { Project, RankingEntry, MediaAsset } from '../types';
 import { api } from '../services/api';
@@ -32,6 +34,7 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
   const [entries, setEntries] = useState<RankingEntry[]>([]);
   const [media, setMedia] = useState<MediaAsset[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Left sidebar tab: 'rankings' | 'media'
   const [leftTab, setLeftTab] = useState<'rankings' | 'media'>('rankings');
@@ -60,6 +63,7 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
   const loadProjectData = async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       const [projData, rankData, mediaData] = await Promise.all([
         api.getProject(projectId),
         api.getRankings(projectId),
@@ -72,8 +76,9 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
       // Initialize history stack
       setHistory([{ project: projData, entries: rankData }]);
       setHistoryIndex(0);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load project details:', err);
+      setLoadError(err?.message || 'Failed to load project details. It may not exist or has been removed.');
     } finally {
       setLoading(false);
     }
@@ -343,6 +348,41 @@ export const ProjectEditor: React.FC<ProjectEditorProps> = ({
       setLeftTab('rankings');
     }
   };
+
+  if (loadError) {
+    return (
+      <div className="min-h-screen bg-studio-950 flex flex-col items-center justify-center p-6 text-center space-y-5">
+        <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 shadow-xl shadow-red-500/10">
+          <AlertCircle size={32} />
+        </div>
+        <div className="space-y-1.5 max-w-md">
+          <h3 className="text-lg font-bold text-white tracking-tight">Project Could Not Be Loaded</h3>
+          <p className="text-xs text-slate-400 leading-relaxed font-mono">
+            {loadError}
+          </p>
+          <p className="text-[11px] text-slate-500 pt-1">
+            The project ID ({projectId}) may have been removed, or the database container may have restarted.
+          </p>
+        </div>
+        <div className="flex items-center gap-3 pt-2">
+          <button
+            onClick={loadProjectData}
+            className="flex items-center gap-2 px-4 py-2 bg-studio-800 hover:bg-studio-700 text-slate-200 text-xs font-semibold rounded-xl border border-studio-700 transition-colors"
+          >
+            <RotateCcw size={14} />
+            Try Again
+          </button>
+          <button
+            onClick={onBackToDashboard}
+            className="flex items-center gap-2 px-4 py-2 bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-extrabold rounded-xl shadow-lg shadow-yellow-500/20 transition-all active:scale-95"
+          >
+            <ArrowLeft size={14} />
+            Return to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading || !project) {
     return (

@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Play, Pause, RotateCcw, Volume2, VolumeX, Maximize2, Sparkles } from 'lucide-react';
 import { Project, RankingEntry } from '../types';
 import { soundEffects } from '../services/soundEffects';
+import { getMediaUrl } from '../services/api';
 
 interface CanvasPreviewProps {
   project: Project;
@@ -149,7 +150,7 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({
             activeEntry.asset.media_type === 'video' ? (
               <video
                 ref={videoRef}
-                src={activeEntry.asset.file_path}
+                src={getMediaUrl(activeEntry.asset.file_path)}
                 className={`w-full h-full ${
                   activeEntry.fit_mode === 'cover' ? 'object-cover' : 'object-contain'
                 }`}
@@ -159,7 +160,7 @@ export const CanvasPreview: React.FC<CanvasPreviewProps> = ({
               />
             ) : (
               <img
-                src={activeEntry.asset.file_path}
+                src={getMediaUrl(activeEntry.asset.file_path)}
                 alt={activeEntry.custom_label}
                 className={`w-full h-full ${
                   activeEntry.fit_mode === 'cover' ? 'object-cover' : 'object-contain'

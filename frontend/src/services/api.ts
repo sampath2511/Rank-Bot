@@ -1,9 +1,27 @@
 import { Project, RankingEntry, MediaAsset, RenderJob, UrlImportResult } from '../types';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const rawBase = import.meta.env.VITE_API_BASE_URL || '/api';
+export const BASE_URL = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
+
+export function getMediaUrl(path: string | null | undefined): string {
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('blob:')) {
+    return path;
+  }
+  if (BASE_URL.startsWith('http://') || BASE_URL.startsWith('https://')) {
+    try {
+      const parsed = new URL(BASE_URL);
+      const cleanPath = path.startsWith('/') ? path : `/${path}`;
+      return `${parsed.origin}${cleanPath}`;
+    } catch {
+      // fallback
+    }
+  }
+  return path.startsWith('/') ? path : `/${path}`;
+}
 
 export async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const url = `${BASE_URL}${endpoint}`;
+  const url = `${BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
   const response = await fetch(url, {
     ...options,
     headers: {
@@ -152,5 +170,7 @@ export const api = {
   // Health
   async getHealth(): Promise<{ status: string; ffmpeg: { available: boolean } }> {
     return apiRequest('/health');
-  }
+  },
+
+  getMediaUrl
 };

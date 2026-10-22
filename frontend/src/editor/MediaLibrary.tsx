@@ -185,12 +185,12 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
                   <div className="relative aspect-video w-full bg-black flex items-center justify-center overflow-hidden">
                     {asset.media_type === 'video' ? (
                       asset.thumbnail_path ? (
-                        <img src={asset.thumbnail_path} alt={asset.original_filename} className="w-full h-full object-cover" />
+                        <img src={api.getMediaUrl(asset.thumbnail_path)} alt={asset.original_filename} className="w-full h-full object-cover" />
                       ) : (
                         <Video size={24} className="text-studio-accent" />
                       )
                     ) : asset.media_type === 'image' ? (
-                      <img src={asset.file_path} alt={asset.original_filename} className="w-full h-full object-cover" />
+                      <img src={api.getMediaUrl(asset.file_path)} alt={asset.original_filename} className="w-full h-full object-cover" />
                     ) : (
                       <Music size={24} className="text-emerald-400" />
                     )}

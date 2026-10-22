@@ -12,6 +12,7 @@ import {
   Layers
 } from 'lucide-react';
 import { RankingEntry, MediaAsset } from '../types';
+import { getMediaUrl } from '../services/api';
 
 interface RankingsListProps {
   entries: RankingEntry[];
@@ -125,7 +126,7 @@ export const RankingsList: React.FC<RankingsListProps> = ({
                     entry.asset.media_type === 'video' ? (
                       entry.asset.thumbnail_path ? (
                         <img 
-                          src={entry.asset.thumbnail_path} 
+                          src={getMediaUrl(entry.asset.thumbnail_path)} 
                           alt="thumb" 
                           className="w-full h-full object-cover" 
                         />
@@ -134,7 +135,7 @@ export const RankingsList: React.FC<RankingsListProps> = ({
                       )
                     ) : (
                       <img 
-                        src={entry.asset.file_path} 
+                        src={getMediaUrl(entry.asset.file_path)} 
                         alt="thumb" 
                         className="w-full h-full object-cover" 
                       />

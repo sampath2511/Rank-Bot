@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rankstudio-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - rankstudio-media:/app/media
+      - rankstudio-data:/app/data
+    environment:
+      - ALLOWED_ORIGINS=https://rank-bot-six.vercel.app,http://localhost:5173
+      - MAX_UPLOAD_SIZE_MB=250
+    restart: unless-stopped
+
+volumes:
+  rankstudio-media:
+  rankstudio-data:

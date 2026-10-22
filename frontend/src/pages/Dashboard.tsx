@@ -10,7 +10,9 @@ import {
   ExternalLink, 
   Sparkles, 
   FolderPlus,
-  Loader2
+  Loader2,
+  AlertCircle,
+  RotateCcw
 } from 'lucide-react';
 import { Project } from '../types';
 import { api } from '../services/api';
@@ -24,6 +26,7 @@ interface DashboardProps {
 export const Dashboard: React.FC<DashboardProps> = ({ onOpenProject }) => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
 
   // New Project Modal State
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -38,12 +41,30 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenProject }) => {
   const loadProjects = async () => {
     try {
       setLoading(true);
+      setDashboardError(null);
       const data = await api.getProjects();
       setProjects(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load projects:', err);
+      setDashboardError(err?.message || 'Failed to connect to backend API.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateSampleProject = async () => {
+    setIsCreating(true);
+    try {
+      const created = await api.createProject({
+        name: 'Top 5 Viral Ranking Showcase',
+        aspect_ratio: '9:16',
+        template_type: 'standard_ranking',
+      });
+      onOpenProject(created.id);
+    } catch (err: any) {
+      alert(`Could not create sample project: ${err.message}`);
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -147,6 +168,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenProject }) => {
 
         {/* Projects Section */}
         <div className="space-y-4">
+          {/* Connection Error Banner */}
+          {dashboardError && (
+            <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-between gap-4 text-xs">
+              <div className="flex items-center gap-3 text-red-300">
+                <AlertCircle size={18} className="text-red-400 shrink-0" />
+                <div>
+                  <p className="font-bold text-white">Connection Error</p>
+                  <p className="text-[11px] text-red-300/80">{dashboardError}</p>
+                </div>
+              </div>
+              <button
+                onClick={loadProjects}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-200 font-bold rounded-xl border border-red-500/40 transition-colors shrink-0"
+              >
+                <RotateCcw size={12} />
+                Retry
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
               <Video size={18} className="text-yellow-400" />
@@ -171,15 +212,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenProject }) => {
               <div className="space-y-1">
                 <h4 className="text-base font-bold text-white">No Projects Yet</h4>
                 <p className="text-xs text-slate-400 max-w-sm">
-                  Click the button below to start your first ranking video project with pre-built slots and styling.
+                  Start your first ranking video project with pre-built slots and styling, or load our starter showcase template.
                 </p>
               </div>
-              <button
-                onClick={() => setIsCreateOpen(true)}
-                className="px-5 py-2.5 bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-extrabold rounded-xl shadow-md transition-all"
-              >
-                Create First Ranking Project
-              </button>
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+                <button
+                  onClick={handleCreateSampleProject}
+                  disabled={isCreating}
+                  className="px-5 py-2.5 bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 text-black text-xs font-extrabold rounded-xl shadow-md shadow-yellow-500/20 transition-all flex items-center gap-1.5"
+                >
+                  <Sparkles size={14} />
+                  {isCreating ? 'Generating...' : 'Load Sample Demo Project'}
+                </button>
+                <button
+                  onClick={() => setIsCreateOpen(true)}
+                  className="px-5 py-2.5 bg-studio-800 hover:bg-studio-700 text-white text-xs font-bold rounded-xl border border-studio-700 transition-all"
+                >
+                  Create Custom Project
+                </button>
+              </div>
             </div>
           ) : (
             /* Project Grid */

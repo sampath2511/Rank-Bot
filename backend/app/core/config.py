@@ -10,7 +10,9 @@ class Settings(BaseSettings):
     
     # Base directories
     BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent.parent
-    MEDIA_DIR: Path = Path("/tmp/media") if os.environ.get("VERCEL") else (BASE_DIR / "media")
+    MEDIA_DIR: Path = Path(os.environ["MEDIA_DIR"]) if os.environ.get("MEDIA_DIR") else (
+        Path("/tmp/media") if os.environ.get("VERCEL") else (BASE_DIR / "media")
+    )
     UPLOADS_DIR: Path = MEDIA_DIR / "uploads"
     THUMBNAILS_DIR: Path = MEDIA_DIR / "thumbnails"
     RENDERS_DIR: Path = MEDIA_DIR / "renders"
